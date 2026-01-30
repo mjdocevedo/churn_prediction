@@ -1,1 +1,6 @@
 outline.md
+__pycache__/
+uv.lock
+mlflow.db
+mlruns/
+dataviz/
