@@ -1,35 +1,38 @@
 import mlflow
+import os
 import pandas as pd
-from sklearn.metrics import classification_report, accuracy_score
 from loader import get_train_test_split_data
 
 # --- Configuration ---
-# To evaluate, you need a Model URI. 
-# After running train.py, replace this with the URI from your latest run or Model Registry.
-# Example: "runs:/<RUN_ID>/model" or "models:/ChurnModel/1"
-MODEL_URI = "models:/ChurnModel/Production" 
+MODEL_URI = os.getenv("MLFLOW_MODEL_URI_OVERRIDE", "models:/ChurnModel/Production") 
 DATA_PATH = "data/telco_churn.csv"
 
 def evaluate():
     print(f"Loading test data from {DATA_PATH}...")
+    # Load separate X and y
     _, X_test, _, y_test = get_train_test_split_data(DATA_PATH)
     
-    print(f"Loading model from {MODEL_URI}...")
-    try:
-        model = mlflow.sklearn.load_model(MODEL_URI)
-    except Exception as e:
-        print(f"Error loading model: {e}")
-        print("Please check the MODEL_URI in evaluate.py")
-        return
-
-    print("Running predictions...")
-    y_pred = model.predict(X_test)
+    # Combine for mlflow.evaluate which expects a single dataset with specific targets
+    eval_data = X_test.copy()
+    eval_data["Churn"] = y_test
     
-    acc = accuracy_score(y_test, y_pred)
-    print(f"\nAccuracy: {acc:.4f}")
+    print(f"Evaluating model: {MODEL_URI}")
     
-    print("\nClassification Report:")
-    print(classification_report(y_test, y_pred))
+    # Start a new run for evaluation (or log to existing one if we had the ID)
+    # Since this is a distinct 'evaluate' step in the pipeline, a new run makes sense for observability.
+    with mlflow.start_run(run_name="Evaluation"):
+        # mlflow.evaluate is the "Model-First" approach to evaluation
+        result = mlflow.evaluate(
+            model=MODEL_URI,
+            data=eval_data,
+            targets="Churn",
+            model_type="classifier",
+            evaluators=["default"],
+        )
+        
+        print("\nEvaluation Result:")
+        print(f"Metrics: {result.metrics}")
+        print(f"Artifacts: {result.artifacts}")
 
 if __name__ == "__main__":
     evaluate()

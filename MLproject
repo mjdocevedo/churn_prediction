@@ -1,12 +1,20 @@
 name: churn-prediction
 
-python_env: pyproject.toml
+docker_env:
+  image: churn-prediction-env
 
 entry_points:
   main:
     command: "python src/train.py"
+  
   evaluate:
-    parameters:
-      model_uri: {type: uri}
-      data_path: {type: string, default: "data/telco_churn.csv"}
-    command: "python src/evaluate.py --model_uri {model_uri} --data_path {data_path}"
+    # Evaluate script uses MLFLOW_MODEL_URI_OVERRIDE env var if set, or defaults
+    command: "python src/evaluate.py"
+    
+  register:
+    # Register script uses MLFLOW_RUN_ID env var
+    command: "python src/register.py"
+
+  serve:
+    # Serve script uses MLFLOW_MODEL_URI_OVERRIDE env var (defaults to Staging)
+    command: "python src/serve.py"
