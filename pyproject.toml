@@ -1,0 +1,14 @@
+[project]
+name = "churn-prediction"
+version = "0.1.0"
+description = "Churn prediction project for MLflow course"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "mlflow==3.8.1",
+    "scikit-learn",
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "seaborn",
+]
