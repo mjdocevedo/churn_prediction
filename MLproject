@@ -1,0 +1,26 @@
+name: churn-prediction
+
+# Environment: use the Docker image built from docker/Dockerfile
+docker_env:
+  image: churn-prediction-env
+
+entry_points:
+  # Train the model
+  train:
+    command: "python src/churn/train.py"
+
+  # Evaluate the model
+  evaluate:
+    command: "python src/churn/evaluate.py"
+
+  # Register in the Model Registry
+  register:
+    command: "python src/churn/register.py"
+
+  # Promote based on metrics
+  promote:
+    command: "python src/churn/promote.py"
+
+  # Full pipeline: Train → Evaluate → Register → Promote
+  workflow:
+    command: "python src/pipeline.py"

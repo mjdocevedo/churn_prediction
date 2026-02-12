@@ -34,11 +34,6 @@ def load_data(path="data/telco_churn.csv"):
     # We use drop_first=True to avoid multicollinearity for linear models (dummy variable trap).
     df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
     
-    # 6. Basic Feature Engineering (Optional but good for Intro)
-    # Ensure all columns are numeric now
-    # Display shape for debugging
-    # print(f"Data Loaded: {df.shape}")
-    
     return df
 
 def get_train_test_split_data(path="data/telco_churn.csv", test_size=0.2, random_state=42):

@@ -1,0 +1,24 @@
+# =============================================
+# compose.prod.yml — Production Overrides
+# =============================================
+# Usage: docker compose -f docker/compose.yml -f docker/compose.prod.yml up -d
+# Enforces production best practices: restart policies, minimal exposure.
+
+services:
+  postgres:
+    restart: unless-stopped
+
+  mlflow-server:
+    restart: unless-stopped
+    # In strict production, you might hide this port behind a reverse proxy
+    # ports: []
+
+  pipeline-runner:
+    # Pipeline is a "Task", not a "Service", so no restart
+    restart: "no"
+
+  model-server:
+    restart: unless-stopped
+    # In production, we assume the base image `churn-prediction-env` is built freshly
+    # or you could override "image:" here to point to a specific tagged version
+    # image: my-registry/churn-prediction:v1.0.0

@@ -1,0 +1,103 @@
+# =============================================
+# compose.yml — Base "Prod-Like" Infrastructure
+# =============================================
+# This file defines the stable, reproducible stack.
+# It uses NAMED VOLUMES for persistence (no host bind mounts).
+# It works everywhere (Dev, CI, Prod).
+#
+# Usage:
+#   docker compose up -d            (Auto-applies compose.override.yml for Dev)
+#   docker compose -f docker/compose.yml up -d (Run ONLY this base stack)
+
+services:
+  # ---- Backend Store ----
+  postgres:
+    image: postgres:15
+    container_name: mlflow_postgres
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---- Central MLflow Tracking Server ----
+  mlflow-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: churn-prediction-env
+    container_name: mlflow_server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Clients inside the network use this URL
+      MLFLOW_TRACKING_URI: http://mlflow-server:5000
+    volumes:
+      # Use a named volume for artifacts (reproducible)
+      - mlruns_data:/mlruns
+    ports:
+      # Exposed for UI access
+      - "5000:5000"
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
+      --default-artifact-root /mlruns
+      --workers 2
+      --allowed-hosts "*"
+
+  # ---- Pipeline Runner ----
+  pipeline-runner:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: churn-prediction-env
+    container_name: churn_pipeline_runner
+    depends_on:
+      mlflow-server:
+        condition: service_started
+    environment:
+      # Point to the central server
+      MLFLOW_TRACKING_URI: http://mlflow-server:5000
+    volumes:
+      # Use the same named volume to share artifacts with the server
+      - mlruns_data:/mlruns
+    command: python src/pipeline.py
+
+  # ---- Model Server ----
+  model-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: churn-prediction-env
+    container_name: churn_model_server
+    depends_on:
+      mlflow-server:
+        condition: service_started
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow-server:5000
+      # Serve the model from Production by default (after pipeline promotion)
+      MLFLOW_MODEL_URI: models:/ChurnModel/Production
+    volumes:
+      # Needs access to artifacts to load the model
+      - mlruns_data:/mlruns
+    ports:
+      - "5001:5001"
+    command: >
+      mlflow models serve
+      --model-uri models:/ChurnModel/Production
+      --host 0.0.0.0
+      --port 5001
+      --no-conda
+
+volumes:
+  postgres_data:
+  mlruns_data:

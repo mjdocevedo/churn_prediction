@@ -1,41 +1,59 @@
+"""
+pipeline.py — End-to-end MLOps Pipeline
+
+Orchestrates the full workflow:
+  Train → Evaluate → Register → Promote
+
+Can be run locally via `uv run src/pipeline.py`
+or inside a container via `docker compose run pipeline-runner`.
+"""
 import mlflow
-import subprocess
+import sys
 import os
+import importlib
+
+# Add src/ to the Python path so churn package is importable
+sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+
+from churn.train import train
+from churn.evaluate import evaluate
+from churn.register import register
+from churn.promote import promote
+
 
 def run_pipeline():
-    print("=== Starting MLOps Pipeline ===")
-    
+    print("=" * 60)
+    print("  MLOps Pipeline: Train → Evaluate → Register → Promote")
+    print("=" * 60)
+
     # 1. Train
-    print("\n[Step 1] Training Model...")
-    # Using subprocess to run locally and avoid Docker volume mount issues on Windows with spaces in paths
-    subprocess.run(["uv", "run", "src/train.py"], check=True)
-    
-    # Retrieve the last run ID
-    last_run = mlflow.search_runs(experiment_names=["Churn_Prediction_Basic"], order_by=["start_time DESC"], max_results=1).iloc[0]
-    run_id = last_run.run_id
-    print(f"Training Complete. Run ID: {run_id}")
-    
+    print("\n[Step 1/4] Training Model...")
+    run_id = train()
+    print(f"✅ Training Complete. Run ID: {run_id}")
+
     # 2. Evaluate
-    print("\n[Step 2] Evaluating Model...")
-    model_uri = f"runs:/{run_id}/model"
-    
-    # Pass configuration via environment variables
-    env = os.environ.copy()
-    env["MLFLOW_MODEL_URI_OVERRIDE"] = model_uri
-    
-    subprocess.run(["uv", "run", "src/evaluate.py"], check=True, env=env)
-    
+    print("\n[Step 2/4] Evaluating Model...")
+    evaluate(model_uri=f"runs:/{run_id}/model")
+    print("✅ Evaluation Complete.")
+
     # 3. Register
-    print("\n[Step 3] Registering Model...")
-    env["MLFLOW_RUN_ID"] = run_id
-    subprocess.run(["uv", "run", "src/register.py"], check=True, env=env)
-    
-    # 4. Serve
-    print("\n[Step 4] Serving Model...")
-    print(f"Model from run {run_id} is now registered in 'Staging'.")
-    print("To serve, choose one method:")
-    print("  1. Docker Compose (Recommended): docker compose up --build")
-    print("  2. Local CLI: mlflow models serve -m models:/ChurnModel/Staging -p 5000 --no-conda")
+    print("\n[Step 3/4] Registering Model...")
+    register(run_id=run_id)
+    print("✅ Registration Complete.")
+
+    # 4. Promote
+    print("\n[Step 4/4] Promoting Model...")
+    promote()
+    print("✅ Promotion Complete.")
+
+    print("\n" + "=" * 60)
+    print("  Pipeline finished successfully!")
+    print("=" * 60)
+    print("\nNext steps:")
+    print("  • View experiments: http://localhost:5001 (MLflow UI)")
+    print("  • Serve model:      docker compose -f docker/compose.yml up model-server")
+    print("  • Build image:      uv run src/churn/build_model_image.py")
+
 
 if __name__ == "__main__":
     run_pipeline()

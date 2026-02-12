@@ -1,0 +1,29 @@
+# =============================================
+# compose.override.yml — Local Development
+# =============================================
+# Automatically loaded by `docker compose up` when in this directory.
+# Adds "Developer Comfort": bind mounts for live code edits and local data visibility.
+
+services:
+  mlflow-server:
+    volumes:
+      # Traceability: See artifacts on your local disk
+      - ../mlruns:/mlruns
+      # Access to local datasets
+      - ../data:/app/data
+
+  pipeline-runner:
+    volumes:
+      # Live Code Reloading: Edit src/ locally, run immediately in container
+      - ../src:/app/src
+      # Persist runs to local folder
+      - ../mlruns:/mlruns
+      # Read local data
+      - ../data:/app/data
+
+  model-server:
+    volumes:
+      # Reload model serving code if changed
+      - ../src:/app/src
+      # Read artifacts from local folder
+      - ../mlruns:/mlruns

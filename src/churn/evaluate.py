@@ -1,7 +1,7 @@
 import mlflow
 import os
 import pandas as pd
-from loader import get_train_test_split_data
+from churn.loader import get_train_test_split_data
 import logging
 import warnings
 
@@ -29,13 +29,13 @@ def get_latest_run_id():
         pass
     return None
 
-def evaluate():
+def evaluate(model_uri=None):
     # 1. Determine Model URI
-    # Priority: Env Var > Latest Run > Placeholder
-    env_uri = os.getenv("MLFLOW_MODEL_URI_OVERRIDE")
-    if env_uri:
-        model_uri = env_uri
-    else:
+    # Priority: Function Arg > Env Var > Latest Run
+    if not model_uri:
+        model_uri = os.getenv("MLFLOW_MODEL_URI_OVERRIDE")
+    
+    if not model_uri:
         latest_run_id = get_latest_run_id()
         if latest_run_id:
             print(f"Auto-detected latest run: {latest_run_id}")
@@ -56,7 +56,6 @@ def evaluate():
     mlflow.set_experiment(EXPERIMENT_NAME)
     
     with mlflow.start_run(run_name="Model_Evaluation"):
-        # Use mlflow.models.evaluate as recommended in the warning
         result = mlflow.evaluate(
             model=model_uri,
             data=eval_data,

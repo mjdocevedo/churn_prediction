@@ -1,6 +1,6 @@
 import mlflow
 from sklearn.ensemble import RandomForestClassifier
-from loader import get_train_test_split_data
+from churn.loader import get_train_test_split_data
 import os
 import logging
 import warnings
@@ -43,6 +43,7 @@ def train():
         rf.fit(X_train, y_train)
         
         print(f"Run complete! Artifacts saved to 'mlruns'")
+        return mlflow.active_run().info.run_id
 
 if __name__ == "__main__":
     train()

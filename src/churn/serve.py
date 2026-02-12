@@ -24,7 +24,7 @@ def serve():
     try:
         subprocess.run(cmd, check=True)
     except KeyboardInterrupt:
-        print("Storpping server...")
+        print("Stopping server...")
 
 if __name__ == "__main__":
     serve()

@@ -1,7 +1,14 @@
-__pycache__
 .venv
 .git
 mlruns
 mlflow.db
-.pytest_cache
+__pycache__
 *.pyc
+docker/
+.env
+.env.example
+.dockerignore
+.gitignore
+README.md
+outline.md
+scripts/

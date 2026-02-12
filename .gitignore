@@ -1,5 +1,7 @@
-outline.md
 .venv/
 mlruns/
 mlflow.db
 __pycache__/
+*.pyc
+.env
+postgres_data/
