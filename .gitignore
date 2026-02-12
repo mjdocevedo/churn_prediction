@@ -5,3 +5,5 @@ __pycache__/
 *.pyc
 .env
 postgres_data/
+outline.md
+walkthorugh.md
