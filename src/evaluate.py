@@ -17,6 +17,7 @@ EXPERIMENT_NAME = "Churn_Prediction_Basic"
 
 def get_latest_run_id():
     try:
+        # Insert your code here
         # Search for the latest run in the experiment
         last_run = mlflow.search_runs(
             experiment_names=[EXPERIMENT_NAME], 
@@ -30,7 +31,7 @@ def get_latest_run_id():
     return None
 
 def evaluate():
-    # 1. Determine Model URI
+    # Determine Model URI
     # Priority: Env Var > Latest Run > Placeholder
     env_uri = os.getenv("MLFLOW_MODEL_URI_OVERRIDE")
     if env_uri:
@@ -52,11 +53,13 @@ def evaluate():
     
     print(f"Evaluating model: {model_uri}")
 
+    # Insert your code here
     # Ensure we log to the same experiment as training
     mlflow.set_experiment(EXPERIMENT_NAME)
     
     with mlflow.start_run(run_name="Model_Evaluation"):
-        # Use mlflow.models.evaluate as recommended in the warning
+        # Insert your code here
+        # Use mlflow.models.evaluate
         result = mlflow.evaluate(
             model=model_uri,
             data=eval_data,

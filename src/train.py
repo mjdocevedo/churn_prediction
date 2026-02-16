@@ -24,9 +24,10 @@ def train():
     X_train, X_test, y_train, y_test = get_train_test_split_data(DATA_PATH)
 
     # 2. Setup MLflow
-    # MLflow 3.x style: set experiment explicitly
+    # Insert your code here
     mlflow.set_experiment(EXPERIMENT_NAME)
     
+    # Insert your code here
     # Enable Autologging (disable system metrics for cleaner output)
     # This captures params, metrics, model artifacts, and system metrics automatically
     mlflow.sklearn.autolog(
@@ -35,6 +36,7 @@ def train():
         silent=True 
     )
 
+    # Insert your code here
     with mlflow.start_run(run_name="Model_Training"):
         print("Starting training run...")
         
