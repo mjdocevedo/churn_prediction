@@ -38,6 +38,7 @@ def get_staging_model_version(client):
 def get_evaluation_metrics(run_id):
     """Retrieve F1 score from the evaluation run associated with a model."""
     # Search for evaluation runs that evaluated this model
+    # Insert your code here
     eval_runs = mlflow.search_runs(
         experiment_names=[EXPERIMENT_NAME],
         filter_string=f"tags.mlflow.runName = 'Model_Evaluation'",
@@ -65,12 +66,13 @@ def get_git_sha():
 
 
 def promote():
+    # Insert your code here
     client = MlflowClient()
 
     # 1. Find the model in Staging
     staging_version = get_staging_model_version(client)
     if not staging_version:
-        print("❌ No model version found in 'Staging'. Run the pipeline first.")
+        print("No model version found in 'Staging'. Run the pipeline first.")
         return
 
     print(f"Found model '{MODEL_NAME}' version {staging_version.version} in Staging.")
@@ -79,18 +81,18 @@ def promote():
     # 2. Check evaluation metrics
     metrics = get_evaluation_metrics(staging_version.run_id)
     if metrics is None:
-        print("⚠️  No evaluation metrics found. Run evaluate.py first.")
+        print("No evaluation metrics found. Run evaluate.py first.")
         return
 
     f1 = metrics.get("f1_score", 0)
     accuracy = metrics.get("accuracy_score", 0)
-    print(f"\n📊 Evaluation Metrics:")
+    print(f"\n Evaluation Metrics:")
     print(f"  F1 Score:  {f1:.4f}  (threshold: {F1_THRESHOLD})")
     print(f"  Accuracy:  {accuracy:.4f}")
 
     # 3. Decision: Promote or Reject
     if f1 >= F1_THRESHOLD:
-        print(f"\n✅ F1 score ({f1:.4f}) >= threshold ({F1_THRESHOLD}). PROMOTING to Production!")
+        print(f"\n F1 score ({f1:.4f}) >= threshold ({F1_THRESHOLD}). PROMOTING to Production!")
 
         # Add traceability tags
         git_sha = get_git_sha()
@@ -98,6 +100,7 @@ def promote():
         client.set_model_version_tag(MODEL_NAME, staging_version.version, "promoted_by", "promote.py")
         client.set_model_version_tag(MODEL_NAME, staging_version.version, "f1_at_promotion", str(round(f1, 4)))
 
+        # Insert your code here
         # Transition to Production
         client.transition_model_version_stage(
             name=MODEL_NAME,
@@ -105,10 +108,10 @@ def promote():
             stage="Production",
             archive_existing_versions=True  # Archive previous production versions
         )
-        print(f"🚀 Model version {staging_version.version} is now in Production!")
+        print(f"Model version {staging_version.version} is now in Production!")
         print(f"   Tagged with git_sha={git_sha}")
     else:
-        print(f"\n❌ F1 score ({f1:.4f}) < threshold ({F1_THRESHOLD}). NOT promoting.")
+        print(f"\n F1 score ({f1:.4f}) < threshold ({F1_THRESHOLD}). NOT promoting.")
         print("   Improve your model or lower the threshold.")
 
 

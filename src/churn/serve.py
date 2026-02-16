@@ -11,6 +11,7 @@ def serve():
     print(f"Starting Model Server for: {MODEL_URI} on port {PORT}...")
     print("Press Ctrl+C to stop.")
     
+    # Insert your code here
     # We use subprocess to call the CLI. 
     # This wrapper allows us to set defaults and handle environment setup easily.
     cmd = [

@@ -13,6 +13,7 @@ def build_model_image():
     print(f"Target Image Name: {DOCKER_IMAGE_NAME}")
     
     try:
+        # Insert your code here
         # MLflow built-in function to generate a Docker image containing the model
         mlflow.models.build_docker(
             model_uri=model_uri,

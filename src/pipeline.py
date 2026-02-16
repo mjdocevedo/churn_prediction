@@ -29,22 +29,24 @@ def run_pipeline():
     # 1. Train
     print("\n[Step 1/4] Training Model...")
     run_id = train()
-    print(f"✅ Training Complete. Run ID: {run_id}")
+    print(f" Training Complete. Run ID: {run_id}")
 
     # 2. Evaluate
     print("\n[Step 2/4] Evaluating Model...")
     evaluate(model_uri=f"runs:/{run_id}/model")
-    print("✅ Evaluation Complete.")
+    print(" Evaluation Complete.")
 
+    # Insert your code here
     # 3. Register
     print("\n[Step 3/4] Registering Model...")
     register(run_id=run_id)
-    print("✅ Registration Complete.")
+    print(" Registration Complete.")
 
+    # Insert your code here
     # 4. Promote
     print("\n[Step 4/4] Promoting Model...")
     promote()
-    print("✅ Promotion Complete.")
+    print(" Promotion Complete.")
 
     print("\n" + "=" * 60)
     print("  Pipeline finished successfully!")
