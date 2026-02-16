@@ -30,13 +30,13 @@ def get_latest_run_id():
         pass
     return None
 
-def evaluate():
-    # Determine Model URI
-    # Priority: Env Var > Latest Run > Placeholder
-    env_uri = os.getenv("MLFLOW_MODEL_URI_OVERRIDE")
-    if env_uri:
-        model_uri = env_uri
-    else:
+def evaluate(model_uri=None):
+    # 1. Determine Model URI
+    # Priority: Function Arg > Env Var > Latest Run
+    if not model_uri:
+        model_uri = os.getenv("MLFLOW_MODEL_URI_OVERRIDE")
+    
+    if not model_uri:
         latest_run_id = get_latest_run_id()
         if latest_run_id:
             print(f"Auto-detected latest run: {latest_run_id}")
@@ -53,13 +53,11 @@ def evaluate():
     
     print(f"Evaluating model: {model_uri}")
 
-    # Insert your code here
     # Ensure we log to the same experiment as training
+    # Insert your code here
     mlflow.set_experiment(EXPERIMENT_NAME)
     
     with mlflow.start_run(run_name="Model_Evaluation"):
-        # Insert your code here
-        # Use mlflow.models.evaluate
         result = mlflow.evaluate(
             model=model_uri,
             data=eval_data,
