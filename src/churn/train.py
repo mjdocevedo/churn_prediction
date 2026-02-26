@@ -1,6 +1,7 @@
 import mlflow
 from sklearn.ensemble import RandomForestClassifier
 from churn.loader import get_train_test_split_data
+from mlflow.models import infer_signature
 import os
 import logging
 import warnings
@@ -42,7 +43,11 @@ def train():
         )
         rf.fit(X_train, y_train)
         
-        print(f"Run complete! Artifacts saved to 'mlruns'")
+        # 4. Explicitly log the model with signature
+        signature = infer_signature(X_train, rf.predict(X_train))
+        mlflow.sklearn.log_model(rf, "model", signature=signature)
+        
+        print(f"Run complete! Model logged to 'mlruns'")
         return mlflow.active_run().info.run_id
 
 if __name__ == "__main__":
