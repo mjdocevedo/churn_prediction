@@ -1,7 +1,7 @@
 import mlflow
 import os
 import pandas as pd
-from churn.loader import get_train_test_split_data
+from loader import get_train_test_split_data
 import logging
 import warnings
 

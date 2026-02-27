@@ -1,6 +1,6 @@
 import mlflow
 from sklearn.ensemble import RandomForestClassifier
-from churn.loader import get_train_test_split_data
+from loader import get_train_test_split_data
 from mlflow.models import infer_signature
 import os
 import logging
