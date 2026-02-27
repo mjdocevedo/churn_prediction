@@ -1,10 +1,15 @@
 import mlflow
 from sklearn.ensemble import RandomForestClassifier
-from loader import get_train_test_split_data
+try:
+    from churn.loader import get_train_test_split_data
+except ImportError:
+    from loader import get_train_test_split_data
 from mlflow.models import infer_signature
 import os
 import logging
 import warnings
+import tempfile
+from pathlib import Path
 
 # --- Configuration ---
 DATA_PATH = "data/telco_churn.csv"
@@ -18,6 +23,7 @@ logging.getLogger("mlflow").setLevel(logging.ERROR)
 logging.getLogger("alembic").setLevel(logging.ERROR)
 # Ignore specific warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="mlflow")
+warnings.filterwarnings("ignore", category=FutureWarning, module="mlflow")
 
 def train():
     # 1. Load Data
@@ -26,6 +32,7 @@ def train():
 
     # 2. Setup MLflow
     # MLflow 3.x style: set experiment explicitly
+
     mlflow.set_experiment(EXPERIMENT_NAME)
     
     # Enable Autologging
@@ -43,9 +50,12 @@ def train():
         )
         rf.fit(X_train, y_train)
         
-        # 4. Explicitly log the model with signature
+        # 4. Force a concrete model artifact at artifacts/model for downstream packaging
         signature = infer_signature(X_train, rf.predict(X_train))
-        mlflow.sklearn.log_model(rf, "model", signature=signature)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            model_dir = Path(tmp_dir) / "model"
+            mlflow.sklearn.save_model(rf, str(model_dir), signature=signature)
+            mlflow.log_artifacts(str(model_dir), artifact_path="model")
         
         print(f"Run complete! Model logged to 'mlruns'")
         return mlflow.active_run().info.run_id

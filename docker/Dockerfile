@@ -21,5 +21,6 @@ COPY src/ src/
 COPY data/ data/
 COPY MLproject ./
 
+
 # Default entrypoint
 CMD ["python", "src/churn/train.py"]
