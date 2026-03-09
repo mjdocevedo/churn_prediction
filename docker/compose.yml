@@ -98,6 +98,60 @@ services:
       --port 5001
       --no-conda
 
+  # ---- ChromaDB (Vector DB) ----
+  chroma-server:
+    image: chromadb/chroma:latest
+    container_name: chroma_server
+    ports:
+      - "8000:8000"
+    environment:
+      - CHROMA_SERVER_AUTH_PROVIDER=
+    volumes:
+      - chroma_data:/chroma/chroma
+
+  # ---- Agent Service (The Application) ----
+  agent-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: churn-prediction-env
+    container_name: agent_service
+    depends_on:
+      mlflow-server:
+        condition: service_started
+      chroma-server:
+        condition: service_started
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow-server:5000
+      CHROMA_HOST: chroma-server
+      CHROMA_PORT: 8000
+      # OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ports:
+      - "8080:8080"
+    command: python src/llm/agent.py --serve
+
+  # ---- Agent Evaluator (CLI/CI job simulation) ----
+  agent-evaluator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: churn-prediction-env
+    container_name: retention_agent_evaluator
+    depends_on:
+      mlflow-server:
+        condition: service_started
+      chroma-server:
+        condition: service_started
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow-server:5000
+      CHROMA_HOST: chroma-server
+      CHROMA_PORT: 8000
+      # OPENAI_API_KEY: ${OPENAI_API_KEY}
+    volumes:
+      - mlruns_data:/mlruns
+    command: python src/llm/evaluate_agent.py
+
 volumes:
   postgres_data:
   mlruns_data:
+  chroma_data:

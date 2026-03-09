@@ -1,0 +1,54 @@
+[
+    {
+        "id": "policy_loyalty_discount",
+        "category": "discount",
+        "condition": "Tenure > 24 months AND Contract == 'Two year'",
+        "benefit": "20% Loyalty Discount for the next 12 months",
+        "description": "Retention offer for long-term loyal customers to reward their commitment.",
+        "keywords": [
+            "loyalty",
+            "discount",
+            "two year",
+            "tenure"
+        ]
+    },
+    {
+        "id": "policy_contract_upgrade",
+        "category": "retention",
+        "condition": "Contract == 'Month-to-month'",
+        "benefit": "One month free if switching to 'One year' or 'Two year' contract",
+        "description": "Encourage month-to-month customers to switch to long-term plans for better stability.",
+        "keywords": [
+            "upgrade",
+            "contract",
+            "month-to-month",
+            "free month"
+        ]
+    },
+    {
+        "id": "policy_fiber_promo",
+        "category": "promotion",
+        "condition": "InternetService == 'Fiber optic' AND MonthlyCharges > 80",
+        "benefit": "Streaming service bundle (Basic) included for 6 months",
+        "description": "Enhance value for high-paying Fiber optic customers to reduce churn risk.",
+        "keywords": [
+            "fiber",
+            "promotion",
+            "streaming",
+            "high charges"
+        ]
+    },
+    {
+        "id": "policy_support_escalation",
+        "category": "safety",
+        "condition": "ChurnRisk > 0.8 OR TechnicalIssues == True",
+        "benefit": "Priority Support Ticket creation",
+        "description": "Immediate escalation to human retention specialist for critical churn risk cases.",
+        "keywords": [
+            "escalation",
+            "support",
+            "priority",
+            "critical"
+        ]
+    }
+]

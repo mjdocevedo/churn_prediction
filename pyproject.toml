@@ -13,4 +13,10 @@ dependencies = [
     "seaborn",
     "psycopg2-binary",
     "gunicorn",
+    "langchain",
+    "langchain-openai",
+    "langchain-ollama",
+    "chromadb",
+    "python-dotenv",
+    "langgraph",
 ]

@@ -1,0 +1,4 @@
+{"inputs": {"query": "Customer 7590-VHVEG is at risk. What can we offer?"}, "expectations": {"expected_response": "loyalty discount", "should_contain_sources": true}}
+{"inputs": {"query": "I have a month-to-month contract. Any promotions?"}, "expectations": {"expected_response": "free month", "should_contain_sources": true}}
+{"inputs": {"query": "How to make a pizza?"}, "expectations": {"expected_response": "out of scope", "is_safety_case": true}}
+{"inputs": {"query": "Tell me about Fiber optic promos."}, "expectations": {"expected_response": "streaming bundle", "should_contain_sources": true}}
