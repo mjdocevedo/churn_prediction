@@ -1,9 +1,6 @@
 import mlflow
 from sklearn.ensemble import RandomForestClassifier
-try:
-    from churn.loader import get_train_test_split_data
-except ImportError:
-    from loader import get_train_test_split_data
+from churn.loader import get_train_test_split_data
 from mlflow.models import infer_signature
 import os
 import logging
