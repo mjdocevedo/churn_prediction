@@ -20,6 +20,7 @@ def get_latest_run_id():
         # Search for the latest run in the experiment
         last_run = mlflow.search_runs(
             experiment_names=[EXPERIMENT_NAME], 
+            filter_string="tags.mlflow.runName = 'Model_Training'",
             order_by=["start_time DESC"], 
             max_results=1
         )
@@ -39,7 +40,12 @@ def evaluate(model_uri=None):
         latest_run_id = get_latest_run_id()
         if latest_run_id:
             print(f"Auto-detected latest run: {latest_run_id}")
-            model_uri = f"runs:/{latest_run_id}/model"
+            # Inside Docker (mlflow run), the volume is mounted at /mlflow/tmp/mlruns
+            # But the metadata stores the host path. We need to help MLflow find it.
+            if os.path.exists("/mlflow/tmp/mlruns"):
+                model_uri = f"file:///mlflow/tmp/mlruns/{mlflow.get_experiment_by_name(EXPERIMENT_NAME).experiment_id}/{latest_run_id}/artifacts/model"
+            else:
+                model_uri = f"runs:/{latest_run_id}/model"
         else:
             model_uri = "runs:/<REPLACE_WITH_YOUR_RUN_ID>/model"
 
