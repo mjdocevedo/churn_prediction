@@ -64,8 +64,6 @@ def register(run_id=None):
     
     print(f"Model registered. Version: {model_details.version}")
     # 2. Transition to Staging
-    # Insert your code here
-    client = MlflowClient()
     print(f"Transitioning version {model_details.version} to Staging...")
     
     client.transition_model_version_stage(
