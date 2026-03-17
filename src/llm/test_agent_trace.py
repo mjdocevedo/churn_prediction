@@ -1,5 +1,7 @@
 import mlflow
 import os
+import sys
+from pathlib import Path
 from agent import create_retention_agent
 from dotenv import load_dotenv
 
@@ -15,7 +17,8 @@ def verify_traces():
     mlflow.set_experiment("llmops_retention_agent")
 
     # 2. Initialize Agent
-    agent = create_retention_agent(prompt_version="v0.1")
+    # Use the numeric prompt version registered in MLflow (e.g., 1 or 2)
+    agent = create_retention_agent(prompt_version=1)
 
     # 3. Trigger Trace
     # Scenario: A customer with a specific ID asking for a discount

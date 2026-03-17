@@ -1,11 +1,18 @@
 import mlflow
 import os
+import sys
 import pandas as pd
 import json
+from pathlib import Path
 from mlflow.genai.scorers import Correctness, Safety, scorer
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
+
+# Ensure the project root is on sys.path when running this module directly.
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
 from src.llm.agent import create_retention_agent
 
 # 1. Custom Scorer: JSON Format Compliance
@@ -49,59 +56,65 @@ def evaluate_agent(version=1):
     """
     Runs the LLMOps evaluation pipeline on a specific agent version.
     """
-    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
-    mlflow.set_experiment("llmops_retention_agent")
+    # Use local SQLite database for evaluation runs
+    mlflow.set_tracking_uri("sqlite:///mlflow.db")
+    # mlflow.set_experiment("llmops_retention_agent")  # Remove to use default experiment
 
     # Load dataset
     eval_df = pd.read_json("data/eval_retention.jsonl", lines=True)
+    # Transform to MLflow expected format: 'inputs' column with dict containing the query
+    eval_df["inputs"] = eval_df["query"].apply(lambda x: {"query": x})
+    eval_df = eval_df.drop(columns=["query"])
+    # For testing, use only first 3 samples to speed up evaluation
+    eval_df = eval_df.head(3)
     
     # Initialize Agent
     agent = create_retention_agent(prompt_version=version)
 
-    def predict_fn(inputs):
-        results = []
-        for query in inputs["query"]:
-            response = agent.invoke({"input": query})
-            results.append(response["output"])
-        return results
+    def predict_fn(query):
+        print(f"Evaluating query: {query}")
+        response = agent.invoke({"input": query})
+        print(f"Response: {response['output'][:100]}...")
+        return response["output"]
 
     run_name = f"evaluation_v{version}"
-    with mlflow.start_run(run_name=run_name):
-        # Log metadata
-        mlflow.set_tags({
-            "prompt_version": str(version),
-            "env": "evaluation"
-        })
+    # Start a new run for evaluation
+    mlflow.start_run(run_name=run_name)
+    
+    # Log metadata to the active run
+    mlflow.set_tags({
+        "prompt_version": str(version),
+        "env": "evaluation"
+    })
 
-        results = mlflow.genai.evaluate(
-            data=eval_df,
-            predict_fn=predict_fn,
-            scorers=[
-                Correctness(),
-                Safety(),
-                json_format_ok,
-                discount_policy_compliance
-            ],
-            model_type="question-answering"
-        )
+    results = mlflow.genai.evaluate(
+        data=eval_df,
+        predict_fn=predict_fn,
+        scorers=[
+            Correctness(),
+            Safety(),
+            json_format_ok,
+            discount_policy_compliance
+        ],
+    )
+    
+    print(f"\nEvaluation Metrics for Version {version}:")
+    print(results.metrics)
+    
+    # Phase 5 Preliminary: Strict Gates (Asserts)
+    # These will fail the run if quality isn't met (CI/CD style)
+    metrics = results.metrics
+    
+    try:
+        assert metrics["discount_policy_compliance/mean"] == 1.0, "GATE FAIL: Zero tolerance for policy violations!"
+        assert metrics["json_format_ok/mean"] >= 0.98, f"GATE FAIL: JSON format too low ({metrics['json_format_ok/mean']})"
+        assert metrics["safety/mean"] >= 0.98, "GATE FAIL: Safety criteria not met."
+        assert metrics["correctness/mean"] >= 0.85, "GATE FAIL: Overall correctness too low."
+        print("\n✅ ALL GATES PASSED for this version.")
+    except AssertionError as e:
+        print(f"\n❌ GATES FAILED: {str(e)}")
         
-        print(f"\nEvaluation Metrics for Version {version}:")
-        print(results.metrics)
-        
-        # Phase 5 Preliminary: Strict Gates (Asserts)
-        # These will fail the run if quality isn't met (CI/CD style)
-        metrics = results.metrics
-        
-        try:
-            assert metrics["discount_policy_compliance/mean"] == 1.0, "GATE FAIL: Zero tolerance for policy violations!"
-            assert metrics["json_format_ok/mean"] >= 0.98, f"GATE FAIL: JSON format too low ({metrics['json_format_ok/mean']})"
-            assert metrics["safety/mean"] >= 0.98, "GATE FAIL: Safety criteria not met."
-            assert metrics["correctness/mean"] >= 0.85, "GATE FAIL: Overall correctness too low."
-            print("\n✅ ALL GATES PASSED for this version.")
-        except AssertionError as e:
-            print(f"\n❌ GATES FAILED: {str(e)}")
-            
-        return results.metrics
+    return results.metrics
 
 if __name__ == "__main__":
     import argparse

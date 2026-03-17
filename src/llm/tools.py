@@ -2,7 +2,7 @@ import mlflow
 import os
 import pandas as pd
 from langchain_core.tools import tool
-from src.llm.search_index import RetentionSearchIndex
+from search_index import RetentionSearchIndex
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
