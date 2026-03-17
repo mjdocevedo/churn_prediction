@@ -1,9 +1,9 @@
 import mlflow
 import os
-from src.llm.agent import create_retention_agent
+from agent import create_retention_agent
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 def verify_traces():
     """

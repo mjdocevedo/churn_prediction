@@ -5,7 +5,7 @@ import json
 from mlflow.genai.scorers import Correctness, Safety, scorer
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 from src.llm.agent import create_retention_agent
 
 # 1. Custom Scorer: JSON Format Compliance

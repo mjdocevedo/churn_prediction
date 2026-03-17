@@ -3,7 +3,7 @@ import os
 import argparse
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 from langchain.agents import create_openai_functions_agent, AgentExecutor

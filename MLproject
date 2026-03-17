@@ -1,49 +1,49 @@
 name: churn-prediction
 
-# NOTE: Commented out docker_env to avoid "invalid reference format" errors on Windows 
-# if your path contains spaces (e.g., "Dev contenu"). 
 # MLflow will now use your local environment (.venv).
 # docker_env:
 #   image: churn-prediction-env
+#   dockerfile: docker/Dockerfile.project
+
 
 entry_points:
   # Train the model
   train:
-    command: "python src/churn/train.py"
+    command: "uv run src/churn/train.py"
 
   # Evaluate the model
   evaluate:
-    command: "python src/churn/evaluate.py"
+    command: "uv run src/churn/evaluate.py"
 
   # Register in the Model Registry
   register:
-    command: "python src/churn/register.py"
+    command: "uv run src/churn/register.py"
 
   # Promote based on metrics
   promote:
-    command: "python src/churn/promote.py"
+    command: "uv run src/churn/promote.py"
 
   # Full pipeline: Train → Evaluate → Register → Promote
   workflow:
-    command: "python src/pipeline.py"
+    command: "uv run src/pipeline.py"
 
   # Initialize LLM Search Index (ChromaDB)
   init_search_index:
-    command: "python src/llm/search_index.py"
+    command: "uv run src/llm/search_index.py"
 
   # Phase 3: Register Prompts
   register_prompts:
-    command: "python src/llm/prompts.py"
+    command: "uv run src/llm/prompts.py"
 
   # Phase 4: Evaluate the Retention Agent
   evaluate_agent:
     parameters:
       version: {type: int, default: 1}
-    command: "python src/llm/evaluate_agent.py --version {version}"
+    command: "uv run src/llm/evaluate_agent.py --version {version}"
 
   # Phase 5: Release Decision (SHIP / NO_SHIP)
   release_decision:
     parameters:
       baseline: {type: int, default: 1}
       candidate: {type: int, default: 2}
-    command: "python src/llm/release_decision.py --baseline {baseline} --candidate {candidate}"
+    command: "uv run src/llm/release_decision.py --baseline {baseline} --candidate {candidate}"

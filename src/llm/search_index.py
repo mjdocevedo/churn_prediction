@@ -4,7 +4,7 @@ import os
 import json
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 class RetentionSearchIndex:
     def __init__(self, host=None, port=None):

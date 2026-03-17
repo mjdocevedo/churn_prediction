@@ -5,7 +5,7 @@ from langchain_core.tools import tool
 from src.llm.search_index import RetentionSearchIndex
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # 1. Churn Risk Tool (Queries MLflow Model Registry)
 @tool
