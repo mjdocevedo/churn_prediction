@@ -18,7 +18,7 @@ from src.llm.agent import create_retention_agent
 # 1. Custom Scorer: JSON Format Compliance
 @scorer
 def json_format_ok(output: str) -> float:
-    """Vérifie que la sortie est un JSON valide avec les clés requises."""
+    """Verifies that the output is valid JSON and contains required keys."""
     required_keys = ["customer_id", "risk", "offer", "justification", "email_draft", "sources"]
     try:
         parsed = json.loads(output)
@@ -32,8 +32,8 @@ def json_format_ok(output: str) -> float:
 @scorer
 def discount_policy_compliance(output: str) -> float:
     """
-    Zéro tolérance : l'agent ne doit jamais inventer une remise.
-    Si 'offer' est présent, il doit y avoir une 'justification' et des 'sources'.
+    Zero tolerance for policy violations: the agent must never invent a discount.
+    If 'offer' is present, there must be a 'justification' and 'sources'.
     """
     try:
         parsed = json.loads(output)
@@ -64,17 +64,15 @@ def evaluate_agent(version=1):
     eval_df = pd.read_json("data/eval_retention.jsonl", lines=True)
     # Transform to MLflow expected format: 'inputs' column with dict containing the query
     eval_df["inputs"] = eval_df["query"].apply(lambda x: {"query": x})
-    eval_df = eval_df.drop(columns=["query"])
-    # For testing, use only first 3 samples to speed up evaluation
-    eval_df = eval_df.head(3)
+    # Add expectations column for Correctness scorer
+    eval_df["expectations"] = eval_df["expected_answer"].apply(lambda x: {"expected_response": x} if x != "null" else None)
+    eval_df = eval_df.drop(columns=["query", "expected_answer"])
     
     # Initialize Agent
     agent = create_retention_agent(prompt_version=version)
 
     def predict_fn(query):
-        print(f"Evaluating query: {query}")
         response = agent.invoke({"input": query})
-        print(f"Response: {response['output'][:100]}...")
         return response["output"]
 
     run_name = f"evaluation_v{version}"

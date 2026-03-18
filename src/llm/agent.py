@@ -37,26 +37,20 @@ class RetentionAgent:
         with mlflow.start_span("retrieve_retention_rules"):
             rules_info = retrieve_retention_rules.func(user_input)
 
-        # 2) Generate response
+        # 2) Generate response (optimized: single efficient LLM call)
         with mlflow.start_span("generate"):
-            system_content = self.system_message.format(input=user_input)
-            prompt_context = (
-                f"---\n"
-                f"Tool Outputs (for the assistant)\n"
-                f"Churn Risk:\n{churn_info}\n\n"
-                f"Retention Rules:\n{rules_info}\n"
-                f"---\n"
+            # Build single optimized prompt combining system message + context + user input
+            final_prompt = (
+                f"{self.system_message}\n\n"
+                f"CHURN RISK ANALYSIS:\n{churn_info}\n\n"
+                f"APPLICABLE RETENTION POLICIES:\n{rules_info}\n\n"
+                f"CUSTOMER REQUEST:\n{user_input}\n\n"
+                f"RESPONSE (JSON):\n"
             )
 
-            messages = [
-                [
-                    SystemMessage(content=system_content),
-                    HumanMessage(content=prompt_context),
-                ]
-            ]
-
-            llm_result = self.llm.generate(messages)
-            output_text = llm_result.generations[0][0].text
+            # Single efficient invoke() call instead of generate()
+            llm_result = self.llm.invoke([HumanMessage(content=final_prompt)])
+            output_text = llm_result.content
 
         return {"output": output_text}
 

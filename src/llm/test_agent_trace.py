@@ -22,7 +22,7 @@ def verify_traces():
 
     # 3. Trigger Trace
     # Scenario: A customer with a specific ID asking for a discount
-    test_query = "Je suis client depuis 3 ans (ID: 7590-VHVEG), est-ce que j'ai droit à une remise ?"
+    test_query = "I am a customer since 3 years (ID: 7590-VHVEG), am I eligible for a discount?"
     
     print(f"Starting trace verification for query: '{test_query}'...")
     
