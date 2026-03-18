@@ -8,7 +8,7 @@ def get_latest_eval_run(prompt_version: int):
     """
     Fetches the most recent evaluation run for a specific prompt version.
     """
-    experiment = mlflow.get_experiment_by_name("llmops_retention_agent")
+    experiment = mlflow.get_experiment_by_name("Churn_Prediction_Basic")
     runs = mlflow.search_runs(
         experiment_ids=[experiment.experiment_id],
         filter_string=f"tags.prompt_version = '{prompt_version}'",

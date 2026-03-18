@@ -125,6 +125,8 @@ services:
       MLFLOW_TRACKING_URI: http://mlflow-server:5000
       CHROMA_HOST: chroma-server
       CHROMA_PORT: 8000
+      MODEL_SERVER_URL: http://model-server:5001/invocations
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
       # OPENAI_API_KEY: ${OPENAI_API_KEY}
     ports:
       - "8080:8080"
@@ -146,6 +148,8 @@ services:
       MLFLOW_TRACKING_URI: http://mlflow-server:5000
       CHROMA_HOST: chroma-server
       CHROMA_PORT: 8000
+      MODEL_SERVER_URL: http://model-server:5001/invocations
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
       # OPENAI_API_KEY: ${OPENAI_API_KEY}
     volumes:
       - mlruns_data:/mlruns

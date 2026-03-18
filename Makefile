@@ -5,6 +5,7 @@ MLFLOW_EXPERIMENT_NAME := Churn_Prediction_Basic
 PY_WARNINGS := ignore::FutureWarning
 MLFLOW_SQLITE_URI := http://127.0.0.1:5001
 MLFLOW_FILE_URI := file://$(PWD)/mlruns
+MODEL_SERVER_URL := http://localhost:5001/invocations
 
 all: train
 

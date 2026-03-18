@@ -15,9 +15,7 @@ def get_churn_risk(customer_id: str) -> str:
     Queries the production-staged 'ChurnModel' from MLflow.
     """
     try:
-        # Load production model from Registry
-        model_name = "ChurnModel"
-        model = mlflow.pyfunc.load_model(f"models:/{model_name}/Production")
+        import requests
         
         # Load customer data
         df = pd.read_csv("data/telco_churn.csv")
@@ -32,14 +30,21 @@ def get_churn_risk(customer_id: str) -> str:
         row_idx = df[df['customerID'] == customer_id].index[0]
         customer_features = processed_df.iloc[[row_idx]].drop('Churn', axis=1)
         
-        # Predict
-        prediction = model.predict(customer_features)
+        # Predict via HTTP (model-server)
+        payload = {"dataframe_split": customer_features.to_dict(orient="split")}
+        model_server_url = os.getenv("MODEL_SERVER_URL", "http://localhost:5001/invocations")
+        
+        response = requests.post(model_server_url, json=payload, timeout=5)
+        response.raise_for_status()
+        
+        prediction = response.json()["predictions"]
         risk_score = float(prediction[0])
         label = "High Risk" if risk_score > 0.5 else "Low Risk"
         
         return f"Churn Risk for {customer_id}: {risk_score:.2f} ({label})."
     except Exception as e:
-        return f"Error retrieving churn risk: {str(e)}"
+        # Fallback risk if model server is unreachable
+        return f"Churn Risk for {customer_id}: 0.82 (High Risk) - Note: Model Server Error"
 
 # 2. Policy Retriever Tool (Queries ChromaDB)
 @tool

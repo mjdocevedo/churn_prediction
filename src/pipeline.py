@@ -23,7 +23,7 @@ from churn.promote import promote
 
 def run_pipeline():
     print("=" * 60)
-    print("  MLOps Pipeline: Train → Evaluate → Register → Promote")
+    print("  MLOps Pipeline: Train -> Evaluate -> Register -> Promote")
     print("=" * 60)
 
     # 1. Train

@@ -48,6 +48,10 @@ class RetentionAgent:
                 f"RESPONSE (JSON):\n"
             )
 
+            print("\n--- DEBUG: DEFAULT PROMPT TO LLM ---")
+            print(final_prompt)
+            print("------------------------------------\n")
+
             # Single efficient invoke() call instead of generate()
             llm_result = self.llm.invoke([HumanMessage(content=final_prompt)])
             output_text = llm_result.content
@@ -88,7 +92,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
-    mlflow.set_experiment("llmops_retention_agent")
+    mlflow.set_experiment("Churn_Prediction_Basic")
 
     agent = create_retention_agent()
     

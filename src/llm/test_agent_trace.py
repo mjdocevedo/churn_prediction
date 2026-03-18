@@ -1,6 +1,7 @@
 import mlflow
 import os
 import sys
+sys.stdout.reconfigure(encoding='utf-8')
 from pathlib import Path
 from agent import create_retention_agent
 from dotenv import load_dotenv
@@ -14,11 +15,11 @@ def verify_traces():
     """
     # 1. Setup MLflow
     mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
-    mlflow.set_experiment("llmops_retention_agent")
+    mlflow.set_experiment("Churn_Prediction_Basic")
 
     # 2. Initialize Agent
     # Use the numeric prompt version registered in MLflow (e.g., 1 or 2)
-    agent = create_retention_agent(prompt_version=1)
+    agent = create_retention_agent(prompt_version=2)
 
     # 3. Trigger Trace
     # Scenario: A customer with a specific ID asking for a discount
