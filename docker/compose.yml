@@ -1,13 +1,25 @@
 # =============================================
-# compose.yml — Base "Prod-Like" Infrastructure
+# compose.yml — MLOps Infrastructure
 # =============================================
-# This file defines the stable, reproducible stack.
-# It uses NAMED VOLUMES for persistence (no host bind mounts).
-# It works everywhere (Dev, CI, Prod).
 #
-# Usage:
-#   docker compose up -d            (Auto-applies compose.override.yml for Dev)
-#   docker compose -f docker/compose.yml up -d (Run ONLY this base stack)
+# ARTIFACT SHARING ARCHITECTURE
+# ==============================
+# All containers that need artifacts (mlflow-server, pipeline-runner,
+# model-server) share the SAME named Docker volume: mlruns_data.
+#
+# The pipeline must be run INSIDE Docker (via pipeline-runner) so that
+# artifacts are written directly to the shared mlruns_data volume.
+# Running the pipeline on the host would write to the host filesystem,
+# not to the volume — use `make docker-pipeline` or `docker-compose run pipeline-runner`.
+#
+# STANDARD WORKFLOW:
+#   1. make infra-up          → start postgres + mlflow-server + chroma
+#   2. make docker-pipeline   → run full MLOps pipeline inside Docker
+#   3. make model-server-up   → start model server
+#   4. curl localhost:5001/health
+#
+# TEARDOWN:
+#   make reset                → stop everything and wipe mlruns_data volume
 
 services:
   # ---- Backend Store ----
@@ -36,14 +48,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      # Clients inside the network use this URL
-      MLFLOW_TRACKING_URI: http://mlflow-server:5000
     volumes:
-      # Use a named volume for artifacts (reproducible)
       - mlruns_data:/mlruns
     ports:
-      # Exposed for UI access
       - "5000:5000"
     command: >
       mlflow server
@@ -51,10 +58,14 @@ services:
       --port 5000
       --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
       --default-artifact-root /mlruns
+      --serve-artifacts
       --workers 2
       --allowed-hosts "*"
 
   # ---- Pipeline Runner ----
+  # Runs the full MLOps pipeline inside Docker, sharing mlruns_data with
+  # the mlflow-server and model-server. Use this instead of running the
+  # pipeline locally to ensure artifacts land in the shared volume.
   pipeline-runner:
     build:
       context: ..
@@ -65,14 +76,14 @@ services:
       mlflow-server:
         condition: service_started
     environment:
-      # Point to the central server
       MLFLOW_TRACKING_URI: http://mlflow-server:5000
     volumes:
-      # Use the same named volume to share artifacts with the server
       - mlruns_data:/mlruns
     command: python src/pipeline.py
 
   # ---- Model Server ----
+  # Shares mlruns_data so it can read artifacts written by pipeline-runner.
+  # Start this AFTER a successful pipeline run.
   model-server:
     build:
       context: ..
@@ -84,10 +95,7 @@ services:
         condition: service_started
     environment:
       MLFLOW_TRACKING_URI: http://mlflow-server:5000
-      # Serve the model from Production by default (after pipeline promotion)
-      MLFLOW_MODEL_URI: models:/ChurnModel/Production
     volumes:
-      # Needs access to artifacts to load the model
       - mlruns_data:/mlruns
     ports:
       - "5001:5001"
@@ -104,12 +112,10 @@ services:
     container_name: chroma_server
     ports:
       - "8000:8000"
-    environment:
-      - CHROMA_SERVER_AUTH_PROVIDER=
     volumes:
       - chroma_data:/chroma/chroma
 
-  # ---- Agent Service (The Application) ----
+  # ---- Agent Service ----
   agent-service:
     build:
       context: ..
@@ -127,12 +133,11 @@ services:
       CHROMA_PORT: 8000
       MODEL_SERVER_URL: http://model-server:5001/invocations
       OLLAMA_BASE_URL: http://host.docker.internal:11434
-      # OPENAI_API_KEY: ${OPENAI_API_KEY}
     ports:
       - "8080:8080"
     command: python src/llm/agent.py --serve
 
-  # ---- Agent Evaluator (CLI/CI job simulation) ----
+  # ---- Agent Evaluator ----
   agent-evaluator:
     build:
       context: ..
@@ -150,9 +155,6 @@ services:
       CHROMA_PORT: 8000
       MODEL_SERVER_URL: http://model-server:5001/invocations
       OLLAMA_BASE_URL: http://host.docker.internal:11434
-      # OPENAI_API_KEY: ${OPENAI_API_KEY}
-    volumes:
-      - mlruns_data:/mlruns
     command: python src/llm/evaluate_agent.py
 
 volumes:

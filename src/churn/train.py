@@ -7,6 +7,12 @@ import logging
 import warnings
 import tempfile
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env
+load_dotenv(override=True)
+
+MODEL_NAME = "ChurnModel"
 
 # --- Configuration ---
 DATA_PATH = "data/telco_churn.csv"
@@ -47,12 +53,14 @@ def train():
         )
         rf.fit(X_train, y_train)
         
-        # 4. Force a concrete model artifact at artifacts/model for downstream packaging
+        # 4. Log model artifact at artifacts/model for downstream packaging
         signature = infer_signature(X_train, rf.predict(X_train))
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            model_dir = Path(tmp_dir) / "model"
-            mlflow.sklearn.save_model(rf, str(model_dir), signature=signature)
-            mlflow.log_artifacts(str(model_dir), artifact_path="model")
+        mlflow.sklearn.log_model(
+            rf, 
+            "model", 
+            signature=signature,
+            registered_model_name=MODEL_NAME
+        )
         
         print(f"Run complete! Model logged to 'mlruns'")
         return mlflow.active_run().info.run_id

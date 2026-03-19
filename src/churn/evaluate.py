@@ -4,6 +4,10 @@ import pandas as pd
 from churn.loader import get_train_test_split_data
 import logging
 import warnings
+from dotenv import load_dotenv
+
+# Load environment variables from .env
+load_dotenv(override=True)
 
 # --- Setup Logging ---
 logging.getLogger("mlflow").setLevel(logging.ERROR)

@@ -13,6 +13,10 @@ from mlflow.tracking import MlflowClient
 import subprocess
 import logging
 import warnings
+from dotenv import load_dotenv
+
+# Load environment variables from .env
+load_dotenv(override=True)
 
 # --- Setup Logging ---
 logging.getLogger("mlflow").setLevel(logging.ERROR)

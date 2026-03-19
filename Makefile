@@ -1,77 +1,142 @@
-# reset local mlruns from scratch
-.PHONY: all train evaluate register promote workflow build-model-image build-project-image fix-mlflow-perms clean-broken-mlruns mlflow-sqlite-build-image mlflow-sqlite-up mlflow-sqlite-logs mlflow-sqlite-down train-sqlite evaluate-sqlite register-sqlite promote-sqlite workflow-sqlite build-model-image-sqlite reset-mlruns
+# =============================================================================
+#  Makefile — Churn Prediction MLOps Project
+# =============================================================================
+#
+#  STANDARD WORKFLOW
+#  -----------------
+#  make build             → Build the Docker image (run once, or after code changes)
+#  make infra-up          → Start postgres + mlflow-server + chroma
+#  make docker-pipeline   → Run full pipeline INSIDE Docker (shares mlruns_data volume)
+#  make model-server-up   → Start the model server
+#  make health            → Check model server is responding
+#  make test-agent        → Run the agent trace test (locally)
+#
+#  ⚠ NOTE ON LOCAL PIPELINE:
+#  `make pipeline` runs the pipeline locally. It connects to the Docker
+#  mlflow-server at http://localhost:5000 and uploads artifacts through
+#  the proxy. However, the artifacts land INSIDE the Docker volume, not
+#  on your host filesystem — so `make docker-pipeline` is the safer choice.
+#
+#  TEARDOWN:
+#  make infra-down        → Stop containers (keeps data)
+#  make reset             → ⚠ Stop containers AND delete all volumes (full clean)
+# =============================================================================
 
-MLFLOW_EXPERIMENT_NAME := Churn_Prediction_Basic
-PY_WARNINGS := ignore::FutureWarning
-MLFLOW_SQLITE_URI := http://127.0.0.1:5001
-MLFLOW_FILE_URI := file://$(PWD)/mlruns
-MODEL_SERVER_URL := http://localhost:5001/invocations
+COMPOSE_FILE   := docker/compose.yml
+MLFLOW_URI     := http://localhost:5000
 
-all: train
+# ---- Build ----------------------------------------------------------------
 
-clean-broken-mlruns:
-	rm -rf mlruns/1
+.PHONY: build
+build: ## Build the shared Docker image (churn-prediction-env)
+	docker-compose -f $(COMPOSE_FILE) build
 
-reset-mlruns:
-	sudo chown -R $(USER):$(USER) mlruns >/dev/null 2>&1 || true
-	rm -rf mlruns
-	mkdir -p mlruns
+# ---- Infrastructure -------------------------------------------------------
 
-train:
-	env -u MLFLOW_TRACKING_URI -u MLFLOW_REGISTRY_URI PYTHONWARNINGS=$(PY_WARNINGS) MLFLOW_TRACKING_URI=$(MLFLOW_FILE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_FILE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run mlflow run . -e train
+.PHONY: infra-up
+infra-up: ## Start postgres, mlflow-server, and chroma-server
+	docker-compose -f $(COMPOSE_FILE) up -d postgres mlflow-server chroma-server
+	@echo ""
+	@echo "  MLflow UI: http://localhost:5000"
+	@echo "  ChromaDB:  http://localhost:8000"
+	@echo "  (Wait ~5s for mlflow-server to be ready before running the pipeline)"
 
-evaluate:
-	env -u MLFLOW_TRACKING_URI -u MLFLOW_REGISTRY_URI PYTHONWARNINGS=$(PY_WARNINGS) MLFLOW_TRACKING_URI=$(MLFLOW_FILE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_FILE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run mlflow run . -e evaluate
+.PHONY: infra-down
+infra-down: ## Stop all containers (data volumes are preserved)
+	docker-compose -f $(COMPOSE_FILE) down
 
-register:
-	env -u MLFLOW_TRACKING_URI -u MLFLOW_REGISTRY_URI PYTHONWARNINGS=$(PY_WARNINGS) MLFLOW_TRACKING_URI=$(MLFLOW_FILE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_FILE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run mlflow run . -e register
+.PHONY: infra-logs
+infra-logs: ## Tail logs for infrastructure containers
+	docker-compose -f $(COMPOSE_FILE) logs -f mlflow-server postgres
 
-promote:
-	env -u MLFLOW_TRACKING_URI -u MLFLOW_REGISTRY_URI PYTHONWARNINGS=$(PY_WARNINGS) MLFLOW_TRACKING_URI=$(MLFLOW_FILE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_FILE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run mlflow run . -e promote
+# ---- Pipeline (inside Docker — RECOMMENDED) --------------------------------
 
-workflow:
-	env -u MLFLOW_TRACKING_URI -u MLFLOW_REGISTRY_URI PYTHONWARNINGS=$(PY_WARNINGS) MLFLOW_TRACKING_URI=$(MLFLOW_FILE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_FILE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run mlflow run . -e workflow
+.PHONY: docker-pipeline
+docker-pipeline: ## Run the full MLOps pipeline inside Docker (artifacts go to shared volume)
+	docker-compose -f $(COMPOSE_FILE) run --rm pipeline-runner
+	@echo ""
+	@echo "  Pipeline complete. Run 'make model-server-up' to serve the model."
 
-build-model-image:
-	env -u MLFLOW_TRACKING_URI -u MLFLOW_REGISTRY_URI PYTHONWARNINGS=$(PY_WARNINGS) MLFLOW_TRACKING_URI=$(MLFLOW_FILE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_FILE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run src/churn/build_model_image.py
+# ---- Pipeline (local — connects to Docker mlflow-server) -------------------
 
-build-project-image:
-	docker build -t churn-prediction-project-env -f docker/Dockerfile.project .
+.PHONY: pipeline
+pipeline: ## Run the full pipeline locally (connects to Docker mlflow-server)
+	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run src/pipeline.py
 
-fix-mlflow-perms:
-	sudo chown -R $(USER):$(USER) mlruns
+.PHONY: train
+train: ## Run training step only (local)
+	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run src/churn/train.py
 
-# --- Clean SQLite tracking workflow (recommended for registry) ---
-mlflow-sqlite-build-image:
-	docker build -t mlflow-sqlite-server -f docker/Dockerfile.mlflow-sqlite .
+.PHONY: evaluate
+evaluate: ## Run evaluation step only (local)
+	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run src/churn/evaluate.py
 
-mlflow-sqlite-up:
-	docker rm -f mlflow-sqlite >/dev/null 2>&1 || true
-	docker run -d --name mlflow-sqlite -p 5001:5001 -v $(PWD)/mlflow_sqlite:/mlflow mlflow-sqlite-server
+.PHONY: register
+register: ## Run registration step only (local)
+	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run src/churn/register.py
 
-mlflow-sqlite-logs:
-	docker logs mlflow-sqlite
+.PHONY: promote
+promote: ## Run promotion step only (local)
+	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run src/churn/promote.py
 
-mlflow-sqlite-down:
-	docker rm -f mlflow-sqlite
+# ---- Model Server ----------------------------------------------------------
 
-train-sqlite:
-	MLFLOW_TRACKING_URI=$(MLFLOW_SQLITE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_SQLITE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run mlflow run . -e train -A network=host
+.PHONY: model-server-up
+model-server-up: ## Start the model server (run after docker-pipeline)
+	docker-compose -f $(COMPOSE_FILE) up -d model-server
+	@echo "  Model server starting at http://localhost:5001"
+	@echo "  Run 'make model-server-logs' to monitor startup."
 
-evaluate-sqlite:
-	MLFLOW_TRACKING_URI=$(MLFLOW_SQLITE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_SQLITE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run mlflow run . -e evaluate -A network=host
+.PHONY: model-server-logs
+model-server-logs: ## Tail model-server logs
+	docker-compose -f $(COMPOSE_FILE) logs -f model-server
 
-register-sqlite:
-	MLFLOW_TRACKING_URI=$(MLFLOW_SQLITE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_SQLITE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run mlflow run . -e register -A network=host
+.PHONY: model-server-down
+model-server-down: ## Stop the model server
+	docker-compose -f $(COMPOSE_FILE) stop model-server
 
-promote-sqlite:
-	MLFLOW_TRACKING_URI=$(MLFLOW_SQLITE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_SQLITE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run mlflow run . -e promote -A network=host
+# ---- Agent -----------------------------------------------------------------
 
-workflow-sqlite:
-	MLFLOW_TRACKING_URI=$(MLFLOW_SQLITE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_SQLITE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run mlflow run . -e workflow -A network=host
+.PHONY: test-agent
+test-agent: ## Run the agent trace test (locally)
+	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run src/llm/test_agent_trace.py
 
-build-model-image-sqlite:
-	MLFLOW_TRACKING_URI=$(MLFLOW_SQLITE_URI) MLFLOW_REGISTRY_URI=$(MLFLOW_SQLITE_URI) MLFLOW_EXPERIMENT_NAME=$(MLFLOW_EXPERIMENT_NAME) uv run src/churn/build_model_image.py
+.PHONY: agent-up
+agent-up: ## Start the agent service container
+	docker-compose -f $(COMPOSE_FILE) up -d agent-service
 
-sqlite-clean-workflow:
-	make mlflow-sqlite-build-image && make mlflow-sqlite-up && make build-project-image && make workflow-sqlite
+# ---- Diagnostics -----------------------------------------------------------
+
+.PHONY: ps
+ps: ## Show running containers and their status
+	docker-compose -f $(COMPOSE_FILE) ps
+
+.PHONY: health
+health: ## Check if the model server is healthy
+	@curl -sf http://localhost:5001/health && echo " OK" || echo " model-server not reachable"
+
+.PHONY: mlflow-ui
+mlflow-ui: ## Open the MLflow UI in the default browser
+	start http://localhost:5000
+
+# ---- Cleanup ---------------------------------------------------------------
+
+.PHONY: reset
+reset: ## ⚠ Stop containers AND delete ALL data volumes (full clean slate)
+	docker-compose -f $(COMPOSE_FILE) down -v
+	@echo ""
+	@echo "  All containers stopped and volumes deleted."
+	@echo "  Run 'make infra-up && make docker-pipeline && make model-server-up' to start fresh."
+
+# ---- Help ------------------------------------------------------------------
+
+.PHONY: help
+help: ## Show available commands
+	@echo ""
+	@echo "  Churn Prediction MLOps — Commands"
+	@echo "  =================================="
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+
+.DEFAULT_GOAL := help

@@ -49,30 +49,35 @@ Customer Input: {{input}}
         commit_message="v0.1: Baseline - Strict JSON contract, no few-shot."
     )
 
-    candidate_template = """Analyze the customer input against the provided data and return a JSON object containing the applicable retention offer.
+    candidate_template = """Analyze the customer input against the provided data and return the applicable retention offer.
 
-### OUTPUT CONTRACT (JSON STRICT)
+### RULES
+1. MUST extract the "score" and "label" from the CHURN RISK ANALYSIS below. Do not invent a score. Do not use the score from the example.
+2. MUST extract the Customer ID from the CUSTOMER REQUEST.
+3. If the customer states they have been a customer for X years, multiply the years by 12 to get the months and check if they have > 24 months tenure. Apply the Loyalty Discount policy.
+4. Output your reasoning first, followed by the exact JSON object wrapped in ```json ... ``` blocks.
+
+### OUTPUT CONTRACT
 {{
   "customer_id": "string",
   "risk": {{ "score": float, "label": "string" }},
-  "offer": {{ "name": "string", "value": "string", "eligibility_rule_id": "string" }} | null,
+  "offer": {{ "name": "string", "value": "string", "eligibility_rule_id": "string" }},
   "justification": "string",
-  "sources": ["rule_id_1", "rule_id_2"]
+  "sources": ["rule_id_1"]
 }}
 
-### RULE
-- If no rule applies, set "offer" to null and "sources" to [].
-- Use only the provided data from retrieve_retention_rules to determine the offer.
+### EXAMPLE FORMAT
+Reasoning: Since the customer is eligible for a discount based on their tenure (3 years > 24 months), I will set the offer to Loyalty Discount with a value of 20% off.
 
-### EXAMPLE
-Input: "I've been here 3 years and want a discount."
-Assistant: {{
-  "customer_id": "123",
-  "risk": {{ "score": 0.82, "label": "High Risk" }},
+```json
+{{
+  "customer_id": "1111-TEST",
+  "risk": {{ "score": 0.50, "label": "Low Risk" }},
   "offer": {{ "name": "Loyalty Discount", "value": "20% off", "eligibility_rule_id": "RULE_policy_loyalty_discount" }},
-  "justification": "Customer has 36 months tenure, eligible for discount.",
+  "justification": "Customer has 3 years tenure, eligible for discount.",
   "sources": ["RULE_policy_loyalty_discount"]
 }}
+```
 
 Customer Input: {{input}}
 """

@@ -48,10 +48,6 @@ class RetentionAgent:
                 f"RESPONSE (JSON):\n"
             )
 
-            print("\n--- DEBUG: DEFAULT PROMPT TO LLM ---")
-            print(final_prompt)
-            print("------------------------------------\n")
-
             # Single efficient invoke() call instead of generate()
             llm_result = self.llm.invoke([HumanMessage(content=final_prompt)])
             output_text = llm_result.content

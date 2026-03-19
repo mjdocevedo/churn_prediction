@@ -18,7 +18,7 @@ def verify_traces():
     mlflow.set_experiment("Churn_Prediction_Basic")
 
     # 2. Initialize Agent
-    # Use the numeric prompt version registered in MLflow (e.g., 1 or 2)
+    # Use the numeric prompt version registered in MLflow 
     agent = create_retention_agent(prompt_version=2)
 
     # 3. Trigger Trace
