@@ -22,3 +22,15 @@ This project demonstrates how to use MLflow to track and manage the machine lear
 - **Automated Governance**: Implement metric-based promotion logic to move models between stages.
 - **Model Serving**: Deploy models as REST APIs using MLflow's built-in serving capabilities.
 - **Inference Environments**: Package models into Docker images for portable, production-ready inference.
+
+---
+
+## Module 3: MLflow LLMOps & Agent Integration
+**Expanding into Generative AI**, this module applies MLflow to build, observe, and industrialize an autonomous LLM Agent (the "Intelligent Retention Assistant").
+
+### Learning Objectives
+- **LLM Tracing & Observability**: Use MLflow's `autologging` to trace Agent execution, visualising reasoning spans, tool calls, and payloads.
+- **Prompt Registry**: Manage prompt templates professionally by storing, versioning, and fetching them dynamically via the MLflow Prompt Registry.
+- **Tool Integration (RAG + Predictive ML)**: Ground the LLM with real data by connecting it to the MLflow Model Server (Predictive Churn) and a local ChromaDB database (Retention Policies).
+- **Deterministic LLM Evaluation**: Run automated evaluations with custom programmatic scorers to ensure strict JSON output compliance and absolute policy adherence (zero tolerance for hallucinated discounts).
+- **Automated LLMOps Governance**: Compare Candidate vs. Baseline prompt versions to programmatically authorize or block production releases (SHIP / NO_SHIP) based on strict quality gates.
