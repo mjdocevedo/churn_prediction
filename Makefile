@@ -95,11 +95,27 @@ model-server-logs: ## Tail model-server logs
 model-server-down: ## Stop the model server
 	docker-compose -f $(COMPOSE_FILE) stop model-server
 
-# ---- Agent -----------------------------------------------------------------
+# ---- LLMOps & Agent --------------------------------------------------------
+
+.PHONY: init-search-index
+init-search-index: ## Initialize the ChromaDB search index (Phase 1)
+	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run mlflow run . -e init_search_index --env-manager local
+
+.PHONY: register-prompts
+register-prompts: ## Register prompts in the MLflow Prompt Registry (Phase 3)
+	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run mlflow run . -e register_prompts --env-manager local
 
 .PHONY: test-agent
 test-agent: ## Run the agent trace test (locally)
 	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run src/llm/test_agent_trace.py
+
+.PHONY: evaluate-agent
+evaluate-agent: ## Evaluate the agent (Phase 4). Usage: make evaluate-agent version=1
+	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run mlflow run . -e evaluate_agent -P version=$(version) --env-manager local
+
+.PHONY: release-decision
+release-decision: ## Run release decision (Phase 5). Usage: make release-decision baseline=1 candidate=2
+	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run mlflow run . -e release_decision -P baseline=$(baseline) -P candidate=$(candidate) --env-manager local
 
 .PHONY: agent-up
 agent-up: ## Start the agent service container

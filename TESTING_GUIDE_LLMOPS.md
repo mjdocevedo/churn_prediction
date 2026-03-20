@@ -86,7 +86,7 @@ graph TD
    ```
 2. **Initialize Search Index (ChromaDB)**:
    ```bash
-   uv run mlflow run . -e init_search_index --env-manager local
+   make init-search-index
    ```
    *Verification*: Check the logs; you should see `Collection 'retention_policies' initialized with X documents.`
 
@@ -108,7 +108,7 @@ graph TD
 
 1. **Register Prompts**:
    ```bash
-   uv run mlflow run . -e register_prompts --env-manager local
+   make register-prompts
    ```
 
    *Verification (UI)*: Open the MLflow UI at `http://localhost:5000`.
@@ -188,12 +188,12 @@ graph TD
 1. **Evaluate Baseline (v1)**:
    > **Note:** Replace `1` with the version ID of your baseline prompt in MLflow.
    ```bash
-   uv run mlflow run . -e evaluate_agent -P version=1 --env-manager local
+   make evaluate-agent version=1
    ```
 2. **Evaluate Candidate (v2)**:
    > **Note:** Replace `2` with the version ID of your candidate prompt in MLflow.
    ```bash
-   uv run mlflow run . -e evaluate_agent -P version=2 --env-manager local
+   make evaluate-agent version=2
    ```
    *Verification*: Console output shows the metrics table and quality gate status:
    - `✅ ALL GATES PASSED` — prompt version is production-safe
@@ -206,7 +206,7 @@ graph TD
 
 1. **Run Decision Logic**:
    ```bash
-   uv run mlflow run . -e release_decision -P baseline=9 -P candidate=10 --env-manager local
+   make release-decision baseline=1 candidate=2
    ```
    *Verification*: The output prints a side-by-side comparison and the final decision:
    - `DECISION: ✅ SHIP` — v2 is better and all gates pass
