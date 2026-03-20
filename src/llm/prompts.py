@@ -52,10 +52,10 @@ Customer Input: {{input}}
     candidate_template = """Analyze the customer input against the provided data and return the applicable retention offer.
 
 ### RULES
-1. MUST extract the "score" and "label" from the CHURN RISK ANALYSIS below. Do not invent a score. Do not use the score from the example.
-2. MUST extract the Customer ID from the CUSTOMER REQUEST.
-3. If the customer states they have been a customer for X years, multiply the years by 12 to get the months and check if they have > 24 months tenure. Apply the Loyalty Discount policy.
-4. Output your reasoning first, followed by the exact JSON object wrapped in ```json ... ``` blocks.
+1. You MUST extract the "score" and "label" from the CHURN RISK ANALYSIS below. Do not invent a score. Do not use the score from the example.
+2. You MUST extract the Customer ID from the CUSTOMER REQUEST.
+3. If the customer states they have been a customer for X years, multiply the years by 12 to get the months and check if they have > 24 months tenure.
+4. Output the JSON object with your answer wrapped in ```json ... ``` blocks.
 
 ### OUTPUT CONTRACT
 {{
@@ -67,7 +67,6 @@ Customer Input: {{input}}
 }}
 
 ### EXAMPLE FORMAT
-Reasoning: Since the customer is eligible for a discount based on their tenure (3 years > 24 months), I will set the offer to Loyalty Discount with a value of 20% off.
 
 ```json
 {{
