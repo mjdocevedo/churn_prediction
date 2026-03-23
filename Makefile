@@ -110,8 +110,8 @@ test-agent: ## Run the agent trace test (locally)
 	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run src/llm/test_agent_trace.py
 
 .PHONY: evaluate-agent
-evaluate-agent: ## Evaluate the agent (Phase 4). Usage: make evaluate-agent version=1
-	MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run mlflow run . -e evaluate_agent -P version=$(version) --env-manager local
+evaluate-agent: ## Evaluate agent via MLflow GenAI eval. Usage: make evaluate-agent version=1 [max=10] [agent_provider=ollama|openai] [agent_model=gemma3:4b|gpt-4o-mini]
+	bash -lc 'cd /home/ubuntu/churn_prediction && set -a; source .env; set +a; MLFLOW_TRACKING_URI=$(MLFLOW_URI) MLFLOW_LANGCHAIN_AUTOLOG=0 AGENT_LLM_PROVIDER=$(or $(agent_provider),ollama) AGENT_LLM_MODEL=$(or $(agent_model),gemma3:4b) LITELLM_BASE_URL=$${LITELLM_BASE_URL:-https://ai-gateway.liora.tech/} OPENAI_API_KEY="$${OPENAI_API_KEY:-$${LITELLM_KEY}}" JUDGE_ENABLED=$${JUDGE_ENABLED:-1} JUDGE_LLM_MODEL=$${JUDGE_LLM_MODEL:-gpt-4o-mini} JUDGE_BASE_URL=$${JUDGE_BASE_URL:-$${LITELLM_BASE_URL:-https://ai-gateway.liora.tech/}} JUDGE_API_KEY="$${JUDGE_API_KEY:-$${OPENAI_API_KEY:-$${LITELLM_KEY}}}" uv run python src/llm/evaluate_agent.py --version $(version) --max-queries $${max:-10} --debug'
 
 .PHONY: release-decision
 release-decision: ## Run release decision (Phase 5). Usage: make release-decision baseline=1 candidate=2
@@ -156,3 +156,17 @@ help: ## Show available commands
 	@echo ""
 
 .DEFAULT_GOAL := help
+# Fast evaluation (for debugging)
+.PHONY: evaluate-agent-fast
+evaluate-agent-fast: ## Fast evaluation with limited queries. Usage: make evaluate-agent-fast version=1 max=3
+MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run python src/llm/evaluate_agent.py --version $(version) --max-queries $(max) --timeout 30
+
+# Direct evaluation without MLflow project wrapper
+.PHONY: evaluate-agent-direct
+evaluate-agent-direct: ## Direct evaluation (no MLflow wrapper). Usage: make evaluate-agent-direct version=1
+MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run python src/llm/evaluate_agent.py --version $(version)
+
+# Professional evaluation
+.PHONY: evaluate-agent-pro
+evaluate-agent-pro: ## Professional parallel evaluation. Usage: make evaluate-agent-pro version=1 max=10 workers=3
+MLFLOW_TRACKING_URI=$(MLFLOW_URI) uv run python src/llm/evaluate_agent_pro.py --version $(version) --max-queries $(or $(max),10) --max-workers $(or $(workers),3)
