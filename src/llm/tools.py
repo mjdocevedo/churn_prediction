@@ -5,7 +5,7 @@ import pandas as pd
 from langchain_core.tools import tool
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv(override=False)
 
 
 @tool

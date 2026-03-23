@@ -4,7 +4,7 @@ from mlflow.entities import RunStatus
 from langchain_core.prompts import PromptTemplate
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv(override=False)
 
 # In MLflow 3.x, GenAI Prompt Registry is a core feature for versioning LLM applications.
 

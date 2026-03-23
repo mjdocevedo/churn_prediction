@@ -4,7 +4,7 @@ import re
 import argparse
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv(override=False)
 from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 from langchain.messages import SystemMessage, HumanMessage
@@ -14,7 +14,7 @@ from prompts import load_prompt_version
 
 def _extract_customer_id(user_input: str) -> str | None:
     """Extract a customer ID from the user's free-text query."""
-    match = re.search(r"ID\s*[:=]\s*([A-Za-z0-9\-]+)", user_input)
+    match = re.search(r"(?:customer\s*)?id\s*(?::|=|is)?\s*([A-Za-z0-9\-]{4,})", user_input, re.IGNORECASE)
     return match.group(1) if match else None
 
 
@@ -58,8 +58,9 @@ class RetentionAgent:
 def create_retention_agent(prompt_version=1):
     """Initializes a retention agent that uses an LLM + tool outputs."""
 
-    # 1. Enable MLflow Tracing with custom tags
-    mlflow.langchain.autolog()
+    # 1. Optional MLflow LangChain autolog (can conflict with mlflow.genai.evaluate tracing)
+    if os.getenv("MLFLOW_LANGCHAIN_AUTOLOG", "0") == "1":
+        mlflow.langchain.autolog()
 
     # 2. Setup LLM based on provider
     provider = os.getenv("LLM_PROVIDER", "openai").lower()
@@ -74,7 +75,12 @@ def create_retention_agent(prompt_version=1):
         )
     else:
         print(f"Using OpenAI LLM: {model_name}")
-        llm = ChatOpenAI(model=model_name, temperature=0)
+        llm = ChatOpenAI(
+            model=model_name,
+            temperature=0,
+            base_url=os.getenv("LITELLM_BASE_URL", ""),
+            api_key=os.getenv("LITELLM_KEY") or os.getenv("OPENAI_API_KEY"),
+        )
 
     # 3. Load Prompt from Registry (Phase 3 alignment)
     prompt_obj = load_prompt_version(version=prompt_version)
