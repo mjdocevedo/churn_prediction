@@ -1,6 +1,8 @@
 # LLMOps Functional Testing Guide
 ## How to verify the "Intelligent Retention Assistant"
 
+Before getting started, follow the LOCAL_LLM_GUIDE.md to download the model to be used locally.
+
 Follow these steps to ensure all components of the LLMOps integration (Phase 1-5) are functional.
 
 ### 🏗️ Architecture Overview
