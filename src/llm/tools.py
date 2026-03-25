@@ -1,5 +1,6 @@
 import sys
 import os
+import mlflow
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import pandas as pd
 from langchain_core.tools import tool
@@ -9,6 +10,7 @@ load_dotenv(override=False)
 
 
 @tool
+@mlflow.trace
 def get_churn_risk(customer_id: str) -> str:
     """
     Fetches the churn risk prediction for a given customer ID.
@@ -72,6 +74,7 @@ def get_churn_risk(customer_id: str) -> str:
 
 
 @tool
+@mlflow.trace
 def retrieve_retention_rules(query: str) -> str:
     """
     Searches the corporate retention policy knowledge base (ChromaDB)

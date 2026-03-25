@@ -25,6 +25,7 @@ class RetentionAgent:
         self.llm = llm
         self.system_message = system_message
 
+    @mlflow.trace
     def invoke(self, inputs: dict) -> dict:
         user_input = inputs.get("input", "")
 
