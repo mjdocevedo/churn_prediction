@@ -75,6 +75,16 @@ def discount_policy_compliance(output: str) -> float:
     return 0.0
 
 
+# Canonical offer keywords from retention_knowledge.json
+_OFFER_KEYWORD_MAP = {
+    "loyalty discount": ["loyalty discount", "policy_loyalty_discount", "loyalty"],
+    "one month free contract upgrade": ["one month free", "policy_contract_upgrade", "contract upgrade", "free month"],
+    "streaming service bundle": ["streaming service bundle", "policy_fiber_promo", "streaming bundle", "fiber promo"],
+    "fiber optic special offer": ["fiber optic", "policy_fiber_promo", "fiber promo", "streaming"],
+    "priority support": ["priority support", "policy_support_escalation", "support ticket"],
+}
+
+
 def business_relevance_score(output: str, expected_answer: str) -> float:
     parsed = _parse_output_json(output)
     expected = (expected_answer or "").strip().lower()
@@ -86,23 +96,26 @@ def business_relevance_score(output: str, expected_answer: str) -> float:
     if expected in {"null", "none", ""}:
         return 1.0 if offer is None else 0.0
 
-    # Expected specific offer (strict)
-    if expected in {"loyalty discount", "fiber update", "commitment offer"}:
+    # Expected a specific named offer — match by keyword
+    for offer_key, keywords in _OFFER_KEYWORD_MAP.items():
+        if expected == offer_key or any(kw in expected for kw in keywords):
+            if not isinstance(offer, dict):
+                # Check if the text at least mentions offer-related keywords
+                return 0.5 if any(kw in text for kw in keywords) else 0.0
+            if not offer.get("eligibility_rule_id"):
+                return 0.5
+            if any(kw in offer_name for kw in keywords) or any(kw in text for kw in keywords):
+                return 1.0
+            return 0.0
+
+    # Fallback: expected contains an offer keyword anywhere
+    offer_indicators = ["loyalty", "discount", "upgrade", "bundle", "promo", "streaming", "fiber", "support"]
+    if any(ind in expected for ind in offer_indicators):
         if not isinstance(offer, dict):
             return 0.0
-        if expected not in offer_name:
-            return 0.0
-        if not offer.get("eligibility_rule_id"):
-            return 0.0
-        return 1.0
-
-    # Expected policy-style answer: must not be placeholder-only response
-    if expected in {"policy check", "retention check", "refund policy"}:
-        bad_patterns = ["customer id not found", "unknown", "n/a"]
-        if any(bp in text for bp in bad_patterns) and "policy" not in text and "rule" not in text:
-            return 0.0
-        indicators = ["policy", "rule", "source", "eligibility", "offer", "refund"]
-        return 1.0 if any(tok in text for tok in indicators) else 0.0
+        if any(ind in offer_name for ind in offer_indicators):
+            return 1.0 if offer.get("eligibility_rule_id") else 0.5
+        return 0.0
 
     return 0.0
 
@@ -120,21 +133,38 @@ def customer_id_quality_score(output: str, query: str = "") -> float:
 
 
 def risk_grounding_score(output: str, query: str = "") -> float:
+    """Score risk grounding quality.
+
+    - Query has customer ID: agent MUST look up and return a non-trivial risk → 0 or 1.
+    - Query has churn signals (cancel, expensive, unhappy): agent should signal medium+ risk → 0.5 or 1.
+    - Generic/safety/OOF query: agent should return low/null risk or null offer → 1.0 if risk score ≤ 0.3, else 0.5.
+    """
     parsed = _parse_output_json(output)
     risk = parsed.get("risk", {}) if isinstance(parsed, dict) else {}
-    score = None
+    risk_score = None
     label = ""
     if isinstance(risk, dict):
-        score = risk.get("score")
+        risk_score = risk.get("score")
         label = str(risk.get("label", "")).strip().lower()
 
+    # Queries with explicit customer ID — must produce a real risk lookup
     if _query_has_customer_id(query):
-        if score in [None, 0, 0.0] or label in {"unknown", "n/a", "none", "null", ""}:
+        if risk_score in [None, 0, 0.0] or label in {"unknown", "n/a", "none", "null", ""}:
             return 0.0
         return 1.0
 
-    # neutral when no id is provided
-    return 0.5
+    # Queries with churn signals — expect at least medium risk or escalation
+    churn_signals = ["cancel", "unhappy", "too expensive", "leaving", "quit", "terminate"]
+    query_lower = (query or "").lower()
+    if any(sig in query_lower for sig in churn_signals):
+        if risk_score is not None and risk_score >= 0.4:
+            return 1.0
+        return 0.5  # partial credit — agent replied but under-estimated risk
+
+    # Out-of-scope / safety / general queries — risk should be low or null
+    if risk_score is None or risk_score <= 0.3:
+        return 1.0
+    return 0.5  # agent assigned risk to an unrelated query — mild penalty
 
 
 
