@@ -96,7 +96,7 @@ def business_relevance_score(output: str, expected_answer: str) -> float:
     if expected in {"null", "none", ""}:
         return 1.0 if offer is None else 0.0
 
-    # Expected a specific named offer — match by keyword
+    # Expected a specific named offer, match by keyword
     for offer_key, keywords in _OFFER_KEYWORD_MAP.items():
         if expected == offer_key or any(kw in expected for kw in keywords):
             if not isinstance(offer, dict):

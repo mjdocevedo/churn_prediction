@@ -57,7 +57,15 @@ class RetentionAgent:
 
 
 def create_retention_agent(prompt_version=1):
-    """Initializes a retention agent that uses an LLM + tool outputs."""
+    """Initializes a retention agent that uses an LLM + tool outputs.
+
+    Args:
+        prompt_version: Integer version number (e.g. 1, 2) used during evaluation,
+            OR the string ``"@production"`` / ``"@challenger"`` to load by MLflow
+            Prompt Registry alias.  The production serving layer should always pass
+            ``"@production"`` so it automatically picks up the latest promoted prompt
+            without a code change.
+    """
 
     # 1. Optional MLflow LangChain autolog (can conflict with mlflow.genai.evaluate tracing)
     if os.getenv("MLFLOW_LANGCHAIN_AUTOLOG", "0") == "1":
@@ -83,9 +91,12 @@ def create_retention_agent(prompt_version=1):
             api_key=os.getenv("LITELLM_KEY") or os.getenv("OPENAI_API_KEY"),
         )
 
-    # 3. Load Prompt from Registry (Phase 3 alignment)
+    # 3. Load Prompt from Registry
+    #    • Integer  → specific version for evaluation (e.g. prompt_version=2)
+    #    • "@production" / "@challenger" → alias for production / rollback
     prompt_obj = load_prompt_version(version=prompt_version)
     system_message = prompt_obj.template
+    print(f"Loaded prompt: {prompt_obj.name} (version={prompt_obj.version}, requested={prompt_version!r})")
 
     return RetentionAgent(llm=llm, system_message=system_message)
 

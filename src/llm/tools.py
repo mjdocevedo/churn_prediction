@@ -60,7 +60,18 @@ def get_churn_risk(customer_id: str) -> str:
         predictions = result.get("predictions", result.get("outputs", []))
         risk_score = float(predictions[0])
         label = "High Risk" if risk_score > 0.5 else "Low Risk"
-        return f"Churn Risk for {customer_id}: {risk_score:.2f} ({label})."
+        
+        # 6. Extract key attributes for the agent to use in policy matching
+        tenure = customer_row["tenure"].values[0]
+        internet = customer_row["InternetService"].values[0]
+        contract = customer_row["Contract"].values[0]
+        monthly_charges = customer_row["MonthlyCharges"].values[0]
+
+        return (
+            f"Churn Risk for {customer_id}: {risk_score:.2f} ({label}).\n"
+            f"Customer Profile: Tenure={tenure} months, Internet={internet}, "
+            f"Contract={contract}, MonthlyCharges=${monthly_charges}."
+        )
 
     except requests.exceptions.ConnectionError:
         return (

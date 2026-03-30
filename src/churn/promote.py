@@ -93,7 +93,19 @@ def promote():
         # Set Tags for traceability
         client.set_model_version_tag(MODEL_NAME, staging_version.version, "git_sha", get_git_sha())
 
-        # NEW: Assign the 'champion' alias
+        # Assign the 'champion' alias
+        # This is what the model-server will look for
+        client.set_registered_model_alias(
+            name=MODEL_NAME, 
+            alias="champion", 
+            version=staging_version.version
+        )
+        
+        # Optional: Keep the stage transition for UI visibility
+        # Set Tags for traceability
+        client.set_model_version_tag(MODEL_NAME, staging_version.version, "git_sha", get_git_sha())
+
+        # Assign the 'champion' alias
         # This is what the model-server will look for
         client.set_registered_model_alias(
             name=MODEL_NAME, 
