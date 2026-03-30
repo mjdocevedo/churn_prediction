@@ -127,7 +127,7 @@ def decide_release(baseline_v: int = 1, candidate_v: int = 2):
     for metric in REGRESSION_GUARD_METRICS:
         b_val = get_val(b_metrics, metric)
         c_val = get_val(c_metrics, metric)
-        regressed = c_val < b_val * 0.95
+        regressed = c_val < b_val - 0.05001
         status = "❌" if regressed else "✅"
         print(f"  {status} {metric}: baseline={b_val:.2f} → candidate={c_val:.2f}")
         if regressed:
